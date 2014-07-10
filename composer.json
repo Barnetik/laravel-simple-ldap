@@ -1,6 +1,7 @@
 {
     "name": "barnetik/laravel-ldap-auth",
     "description": "",
+    "version": "dev-master",
     "authors": [
         {
             "name": "Alayn Gortazar",
