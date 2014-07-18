@@ -98,7 +98,6 @@ class Ldap
     {
         return new GenericUser(array(
             'id' => $userEntry['uid'][0],
-            'password' => $userEntry['userpassword'][0],
             'name' => $userEntry['givenname'][0],
             'surname' => $userEntry['sn'][0],
             'mail' => $userEntry['mail'][0],
