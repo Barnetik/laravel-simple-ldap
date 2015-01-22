@@ -112,9 +112,9 @@ class Ldap
     private function getFilter($uid)
     {
         if (!isset($this->config['filter']) || !$this->config['filter']) {
-            return '(uid=' . $uid . ')';
+            return '(uid=' . ldap_escape($uid) . ')';
         }
-        return '(&(uid=' . $uid . ')' . $this->config['filter'] . ')';
+        return '(&(uid=' . ldap_escape($uid) . ')' . $this->config['filter'] . ')';
     }
     
     private function getUser($userEntry)
