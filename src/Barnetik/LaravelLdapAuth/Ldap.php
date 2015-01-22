@@ -112,10 +112,28 @@ class Ldap
     private function getFilter($uid)
     {
         if (!isset($this->config['filter']) || !$this->config['filter']) {
-            return '(uid=' . ldap_escape($uid) . ')';
+            return '(uid=' . $this->ldap_escape($uid) . ')';
         }
-        return '(&(uid=' . ldap_escape($uid) . ')' . $this->config['filter'] . ')';
+        return '(&(uid=' . $this->ldap_escape($uid) . ')' . $this->config['filter'] . ')';
     }
+    
+    private function ldap_escape($str) 
+    {
+        if (function_exists('ldap_escape')) {
+            return ldap_escape($str);
+        }
+        
+        $metaChars = array ("\\00", "\\", "(", ")", "*");
+        $quotedMetaChars = array ();
+        foreach ($metaChars as $key => $value) {
+            $quotedMetaChars[$key] = '\\'. dechex (ord ($value));
+        }
+        $str = str_replace (
+            $metaChars, $quotedMetaChars, $str
+        ); //replace them
+        return ($str);
+    }
+
     
     private function getUser($userEntry)
     {
