@@ -65,6 +65,15 @@ class Ldap
     
     public function getById($id) 
     {
+        $userEntry = $this->getLdapUserEntry($id);
+        if (!$userEntry) {
+            return null;
+        }
+        return $this->getUser($userEntry);
+    }
+    
+    private function getLdapUserEntry($uid) 
+    {
         $identifier = 'uid';
         
         if (isset($this->config['identifier'])) {
@@ -75,8 +84,8 @@ class Ldap
             throw new \Exception('Ldap base_dn is required');
         }
         
-        $rdn = sprintf('%s=%s,%s', $identifier, $id, $this->config['base_dn']);
-        $filter = $this->getFilter();
+        $rdn = $this->config['base_dn'];
+        $filter = $this->getFilter($uid);
 
         $cacheKey = md5($rdn.$filter);
         if (Cache::has($cacheKey)) {
@@ -85,24 +94,27 @@ class Ldap
 
         $ldap = $this->getLdap();
         $result = @ldap_search($ldap, $rdn, $filter);
-        if ($result !== false) {
-            $entries = @ldap_get_entries($ldap, $result);
-            if ($entries['count'] > 0) {
-                $user = $this->getUser($entries[0]);
-                Cache::put($cacheKey, $user, self::CACHE_TIME);
-                return $user;
-            }
+        
+        if ($result === false) {
+            return null;
         }
         
-        return null;
+        $entries = @ldap_get_entries($ldap, $result);
+        if ($entries === false || $entries['count'] == 0) {
+            return null;
+        }
+        
+        $userEntry = $entries[0];
+        Cache::put($cacheKey, $userEntry, self::CACHE_TIME);
+        return $userEntry;
     }
     
-    private function getFilter()
+    private function getFilter($uid)
     {
         if (!isset($this->config['filter']) || !$this->config['filter']) {
-            return '(objectClass=*)';
+            return '(uid=' . $uid . ')';
         }
-        return $this->config['filter'];
+        return '(&(uid=' . $uid . ')' . $this->config['filter'] . ')';
     }
     
     private function getUser($userEntry)
@@ -118,6 +130,7 @@ class Ldap
     
     public function validateCredentials($user, $credentials)
     {
+        $user = $this->getById($credentials['username']);
         return @ldap_bind($this->getLdap(), $user->dn, $credentials['password']);
     }
 }
