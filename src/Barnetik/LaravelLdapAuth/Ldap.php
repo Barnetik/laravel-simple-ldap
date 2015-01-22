@@ -54,7 +54,7 @@ class Ldap
                 $this->ldap = @ldap_connect($this->config['hostname']);
             }
             ldap_set_option($this->ldap, LDAP_OPT_PROTOCOL_VERSION, 3);
-
+            
             $bind = @ldap_bind($this->ldap, $this->config['bind_dn'], $this->config['bind_pass']);
             if (!$bind) {
                 throw new \Exception('Could not bind to LDAP server');
@@ -76,22 +76,33 @@ class Ldap
         }
         
         $rdn = sprintf('%s=%s,%s', $identifier, $id, $this->config['base_dn']);
-        
-        if (Cache::has($rdn)) {
-            return Cache::get($rdn);
+        $filter = $this->getFilter();
+
+        $cacheKey = md5($rdn.$filter);
+        if (Cache::has($cacheKey)) {
+            return Cache::get($cacheKey);
         }
+
         $ldap = $this->getLdap();
-        $result = @ldap_read($ldap, $rdn, 'objectClass=*');
+        $result = @ldap_search($ldap, $rdn, $filter);
         if ($result !== false) {
             $entries = @ldap_get_entries($ldap, $result);
             if ($entries['count'] > 0) {
                 $user = $this->getUser($entries[0]);
-                Cache::put($rdn, $user, self::CACHE_TIME);
+                Cache::put($cacheKey, $user, self::CACHE_TIME);
                 return $user;
             }
         }
         
         return null;
+    }
+    
+    private function getFilter()
+    {
+        if (!isset($this->config['filter']) || !$this->config['filter']) {
+            return '(objectClass=*)';
+        }
+        return $this->config['filter'];
     }
     
     private function getUser($userEntry)
